@@ -54,6 +54,8 @@ fruit_recipe <- recipe(fruit_name ~ mass + color_score, data = fruit_train) %>%
     step_scale(all_predictors()) %>%
     step_center(all_predictors())
 ```
+The above is how to scale and center (standardize) the *training* data in preperation for knn-classification.
+
 If we want to take a look at the scaled data, the following steps are required:
 ```r
 fruit_scaled <- fruit_recipe %>%
@@ -61,6 +63,7 @@ fruit_scaled <- fruit_recipe %>%
     bake(fruit_data)
 ```
 Note that we have to specify the data frame that we want to bake (= the data set on which we can carry out our modifications in the recipe)
+
 **Model specification:**
 almost always the same for K-nn analysis:
 ```r
@@ -77,13 +80,19 @@ fruit_fit <- workflow() %>%
        fit(data = fruit_train)
 ```
 Note that the data set in ```fit()``` is the training set. The testing set comes into play in predict().
+
 **Tuning:**
 In general it is very similar to a K-nn classification where we use known # of neighbors. A chunk of code is included with the difference commented.
+
+This contains everything:
+
 ```r
+#Assuming there already exists a split
+
 number_vfold <- vfold_cv(training_set, v = 5, strata = y) # perform  x-fold cross-validation, x = v
 knn_tune <- nearest_neighbor(weight_func = "rectangular", neighbors = tune()) %>%
        set_engine("kknn") %>%
-       set_mode("classification"
+       set_mode("classification")
        
 knn_results <- workflow() %>%
        add_recipe(number_recipe) %>%
@@ -97,6 +106,60 @@ accuracies <- knn_results %>%
 
 
 Training set and testing set: we only use the testing set when we want to do the actually prediction (with the function ```predict()```). Before this step, we only use the training set.
+
+***Summary of Tuning Knn model:***
+
+-Use the initial_split function to split the data into a training and test set. Set the strata argument to the class label variable. Put the test set aside for now.
+
+-Use the vfold_cv function to split up the training data for cross-validation.
+
+-Create a recipe that specifies the class label and predictors, as well as preprocessing steps for all variables. Pass the training data as the data argument of the 
+recipe.
+
+-Create a nearest_neighbors model specification, with neighbors = tune().
+
+-Add the recipe and model specification to a workflow(), and use the tune_grid function on the train/validation splits to estimate the classifier accuracy for a range of  K values.
+
+-Pick a value of  K that yields a high accuracy estimate that doesn’t change much if you change K to a nearby value.
+
+-Make a new model specification for the best parameter value (i.e.,  K), and retrain the classifier using the fit function.
+
+-Evaluate the estimated accuracy of the classifier on the test set using the predict function.
+
+**Using the model for predictions:**
+```r
+new_obs <- tibble(Perimeter = 0, Concavity = 3.5)
+predict(knn_fit, new_obs)
+```
+The above is how to predict using our knn model the class of new_obs 
+
+**Evaluating Accuracy:**
+
+So, the training and testing split data is meant to check the accuracy of our prediction model. We use the training data to train our model, then we apply the model to the testing data, and compare the result of the model to the actual result of the testing data. Accuracy = #of correct predictions / #of total predictions. Assume we have a prediction model, and we have split the dataframe into a testing and a training subset as above. Then, we have trained the model, and we now test it. Apply the model to the test data:
+```r
+cancer_test_predictions <- predict(knn_fit, cancer_test) |>
+  bind_cols(cancer_test)
+
+cancer_test_predictions
+```
+
+Then, we check for the accuracy:
+```r
+cancer_test_predictions |>
+  metrics(truth = Class, estimate = .pred_class) |>
+  filter(.metric == "accuracy")
+```
+We can also look at a table of predicted labels and correct labels, using the conf_mat function:
+```r
+confusion <- cancer_test_predictions |>
+             conf_mat(truth = Class, estimate = .pred_class)
+
+confusion
+```
+**Randomness and what is a seed?**
+
+When we want an unbiased fair distribution or selection of data, we need a random selection, however, we then run into a problem. Scientific analysis is structured around *reproducibility*. So, we use a seed. This essentially randomly selects based on the seed. So to us, selection seems completely random, but it is 100% reproducible.
+
 
 # Individual fn's
 ```
