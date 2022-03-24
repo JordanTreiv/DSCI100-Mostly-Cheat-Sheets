@@ -19,7 +19,21 @@ dist_cancer_two_rows <- cancer  %>%
 It is possible to do K-Nearest Neighbours with more than 2 predictor variables. For some observation with m predictor variables, for observation a: 
 a = (a<sub>1</sub>, a<sub>2</sub>, ... , a<sub>m</sub>)
 
-To calculate the straight line distance for multiple variables, simply adding more of (a<sub>m</sub> - b<sub>m</sub>)<sup>2</sup> into the square root function will suffice.
+To calculate the straight line distance for multiple variables, simply adding more of (a<sub>m</sub> - b<sub>m</sub>)<sup>2</sup> into the square root function will suffice. Looks something like:
+```r
+new_obs_Perimeter <- 0
+new_obs_Concavity <- 3.5
+new_obs_Symmetry <- 1
+
+cancer |>
+  select(ID, Perimeter, Concavity, Symmetry, Class) |>
+  mutate(dist_from_new = sqrt((Perimeter - new_obs_Perimeter)^2 + 
+                              (Concavity - new_obs_Concavity)^2 +
+                                (Symmetry - new_obs_Symmetry)^2)) |>
+  arrange(dist_from_new) |>
+  slice(1:5) # take the first 5 rows
+  ```
+  
 
 **Recipe:**
 As seen below, recipe is used when describing how we want to do the prediction. We first have to specify what is the variable we want to predict and the predictors we are using, and then select the data (usually the training set).
