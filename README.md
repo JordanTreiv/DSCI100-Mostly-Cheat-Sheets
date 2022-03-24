@@ -33,6 +33,18 @@ cancer |>
   arrange(dist_from_new) |>
   slice(1:5) # take the first 5 rows
   ```
+  **Summary of K-Nearest_Neighbours:**
+  
+ In order to classify a new observation using a  ***K***-nearest neighbor classifier, we have to do the following:
+
+-Compute the distance between the new observation and each observation in the training set.
+
+-Sort the data table in ascending order according to the distances.
+
+-Choose the top  ***K*** rows of the sorted table.
+
+-Classify the new observation based on a majority vote of the neighbor classes.
+  
   
 
 **Recipe:**
