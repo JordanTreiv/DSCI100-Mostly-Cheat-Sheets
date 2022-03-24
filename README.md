@@ -16,6 +16,11 @@ dist_cancer_two_rows <- cancer  %>%
     select(Symmetry, Radius, Concavity)  %>% 
     dist() # use dist () fn to figure out the distance
 ```
+It is possible to do K-Nearest Neighbours with more than 2 predictor variables. For some observation with m predictor variables, for observation a: 
+a = (a<sub>1</sub>, a<sub>2</sub>, ... , a<sub>m</sub>)
+
+To calculate the straight line distance for multiple variables, simply adding more of (a<sub>m</sub> - b<sub>m</sub>)<sup>2</sup> into the square root function will suffice.
+
 **Recipe:**
 As seen below, recipe is used when describing how we want to do the prediction. We first have to specify what is the variable we want to predict and the predictors we are using, and then select the data (usually the training set).
 ```r
