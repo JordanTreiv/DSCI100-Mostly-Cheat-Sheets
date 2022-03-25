@@ -1,5 +1,5 @@
 # DSCI100--Midterm2CheatSheet
-# Classification
+## Classification
 **Classification:**
 The idea is to measure the distance between the points we want to predict and the points that we already know.
 -> Measure using the geometric distance
@@ -194,7 +194,50 @@ Similar to metrics, but gives a confusion matrix instead.
 ```
 filter(mean == max(mean))
 ```
-# Chunks of code:
+
+**Regression vs Classification:**
+
+Classification is for predicting *discrete class lables* whereas Regression is for *continuous numerical quantitaive* predictions
+
+Just like in classification, we will split our data into training, validation, and test sets, we will use tidymodels workflows, we will use a K-nearest neighbors (KNN) approach to make predictions, and we will use cross-validation to choose K.
+
+## Regression
+Start by reading in the data:
+```r
+sacramento <- read_csv("data/sacramento.csv")
+```
+Much like in the case of classification, we can use a K-nearest neighbors-based approach in regression to make predictions. Let’s take a small sample of the data in, and walk through how K-nearest neighbors (KNN) works in a regression context.
+```r
+small_sacramento <- slice_sample(sacramento, n = 30)
+```
+Next let’s say we come across a 2,000 square-foot house in Sacramento we are interested in purchasing, with an advertised list price of $350,000. Should we offer to pay the asking price for this house, or is it overpriced and we should offer less?
+```r
+nearest_neighbors <- small_sacramento |>
+  mutate(diff = abs(2000 - sqft)) |>
+  arrange(diff) |>
+  slice(1:5) #subset the first 5 rows
+
+nearest_neighbors
+```
+This yields the difference between the house sizes of the 5 nearest neighbors (in terms of house size) to our new 2000 square foot house of interest. We can now predict the average price based on the 5 nearest neighbours:
+```r
+prediction <- nearest_neighbors |>
+  summarise(predicted = mean(price))
+
+prediction
+```
+This predicts 326234 as the mean price for these homes. Above was the concept-oriented manual method. Now the better method:
+
+Start by splitting the data into train and testing: 
+```r
+sacramento_split <- initial_split(sacramento, prop = 0.75, strata = price)
+sacramento_train <- training(sacramento_split)
+sacramento_test <- testing(sacramento_split)
+```
+Next, we’ll use cross-validation to choose  K. In KNN classification, we used accuracy to see how well our predictions matched the true labels. We cannot use the same metric in the regression setting, since our predictions will almost never exactly match the true response variable values. Therefore in the context of KNN regression we will use root mean square prediction error (RMSPE) instead. The mathematical formula for calculating RMSPE is:
+
+
+## Chunks of code:
 **Splitting the Dataset**
 ```r
 marathon_split <- initial_split(marathon, prop = 0.75, strata = time_hrs)
