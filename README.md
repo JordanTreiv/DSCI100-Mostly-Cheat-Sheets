@@ -272,7 +272,7 @@ sacramento_train <- training(sacramento_split)
 sacramento_test <- testing(sacramento_split)
 ```
 Next, we’ll use cross-validation to choose  K. In KNN classification, we used accuracy to see how well our predictions matched the true labels. We cannot use the same metric in the regression setting, since our predictions will almost never exactly match the true response variable values. Therefore in the context of KNN regression we will use root mean square prediction error (RMSPE) instead. The mathematical formula for calculating RMSPE is:
-
+![RMSPE Formula](https://github.com/JordanTreiv/DSCI100--Midterm2CheatSheet/blob/main/RMSPE.PNG)
 
 ## Chunks of code:
 **Splitting the Dataset**
