@@ -164,6 +164,7 @@ When we want an unbiased fair distribution or selection of data, we need a rando
 **Regression vs Classification:**
 Classification is for predicting *discrete class lables* whereas Regression is for *continuous numerical quantitaive* predictions
 Just like in classification, we will split our data into training, validation, and test sets, we will use tidymodels workflows, we will use a K-nearest neighbors (KNN) approach to make predictions, and we will use cross-validation to choose K.
+
 ## Regression
 Start by reading in the data:
 ```r
@@ -179,12 +180,14 @@ nearest_neighbors <- small_sacramento |>
   mutate(diff = abs(2000 - sqft)) |>
   arrange(diff) |>
   slice(1:5) #subset the first 5 rows
+
 nearest_neighbors
 ```
 This yields the difference between the house sizes of the 5 nearest neighbors (in terms of house size) to our new 2000 square foot house of interest. We can now predict the average price based on the 5 nearest neighbours:
 ```r
 prediction <- nearest_neighbors |>
   summarise(predicted = mean(price))
+
 prediction
 ```
 This predicts 326234 as the mean price for these homes. Above was the concept-oriented manual method. Now the better method:
@@ -196,9 +199,125 @@ sacramento_train <- training(sacramento_split)
 sacramento_test <- testing(sacramento_split)
 ```
 Next, we’ll use cross-validation to choose  K. In KNN classification, we used accuracy to see how well our predictions matched the true labels. We cannot use the same metric in the regression setting, since our predictions will almost never exactly match the true response variable values. Therefore in the context of KNN regression we will use root mean square prediction error (RMSPE) instead. The mathematical formula for calculating RMSPE is:
-RMSPE.png
+RMSPE.png (See repo folders)
 
-# Individual fn's
+In other words, we compute the squared difference between the predicted and true response value for each observation in our test (or validation) set, compute the average, and then finally take the square root. The reason we use the squared difference (and not just the difference) is that the differences can be positive or negative
+Now that we know how we can assess how well our model predicts a numerical value, let’s use R to perform cross-validation and to choose the optimal  K. First, we will create a recipe for preprocessing our data.  Next we create a model specification for K-nearest neighbors regression. Note that we use set_mode("regression") now in the model specification to denote a regression problem, as opposed to the classification problems from the previous chapters. The use of set_mode("regression") essentially tells tidymodels that we need to use different metrics (RMSPE, not accuracy) for tuning and evaluation. Then we create a 5-fold cross-validation object, and put the recipe and model specification together in a workflow.
+```r
+sacr_recipe <- recipe(price ~ sqft, data = sacramento_train) |>
+  step_scale(all_predictors()) |>
+  step_center(all_predictors())
+
+sacr_spec <- nearest_neighbor(weight_func = "rectangular", 
+                              neighbors = tune()) |>
+  set_engine("kknn") |>
+  set_mode("regression")
+
+sacr_vfold <- vfold_cv(sacramento_train, v = 5, strata = price)
+
+sacr_wkflw <- workflow() |>
+  add_recipe(sacr_recipe) |>
+  add_model(sacr_spec)
+
+sacr_wkflw
+```
+Next we run cross-validation for a grid of numbers of neighbors ranging from 1 to 200. The following code tunes the model and returns the RMSPE for each number of neighbors. In the output of the sacr_results results data frame, we see that the neighbors variable contains the value of  K, the mean (mean) contains the value of the RMSPE estimated via cross-validation, and the standard error (std_err) contains a value corresponding to a measure of how uncertain we are in the mean value.
+```r
+gridvals <- tibble(neighbors = seq(from = 1, to = 200, by = 3))
+
+sacr_results <- sacr_wkflw |>
+  tune_grid(resamples = sacr_vfold, grid = gridvals) |>
+  collect_metrics() |>
+  filter(.metric == "rmse")
+
+# show the results
+sacr_results
+```
+***Evaluating on the test set:***
+To assess how well our model might do at predicting on unseen data, we will assess its RMSPE on the test data. To do this, we will first re-train our KNN regression model on the entire training data set, using  K=37 neighbors. Then we will use predict to make predictions on the test data, and use the metrics function again to compute the summary of regression quality. Because we specify that we are performing regression in set_mode, the metrics function knows to output a quality summary related to regression, and not, say, classification.
+```r
+kmin <- sacr_min |> pull(neighbors)
+
+sacr_spec <- nearest_neighbor(weight_func = "rectangular", neighbors = kmin) |>
+  set_engine("kknn") |>
+  set_mode("regression")
+
+sacr_fit <- workflow() |>
+  add_recipe(sacr_recipe) |>
+  add_model(sacr_spec) |>
+  fit(data = sacramento_train)
+
+sacr_summary <- sacr_fit |>
+  predict(sacramento_test) |>
+  bind_cols(sacramento_test) |>
+  metrics(truth = price, estimate = .pred) |>
+  filter(.metric == 'rmse')
+
+sacr_summary
+```
+***Multivariable KNN Regression:***
+As in KNN classification, we can use multiple predictors in KNN regression. In this setting, we have the same concerns regarding the scale of the predictors. Once again, predictions are made by identifying the  K observations that are nearest to the new point we want to predict; any variables that are on a large scale will have a much larger effect than variables on a small scale. But since the recipe we built above scales and centers all predictor variables, this is handled for us.
+
+Note that we also have the same concern regarding the selection of predictors in KNN regression as in KNN classification: having more predictors is not always better, and the choice of which predictors to use has a potentially large influence on the quality of predictions. Fortunately, we can use the predictor selection algorithm from the classification chapter in KNN regression as well. As the algorithm is the same, we will not cover it again in this chapter.
+
+We will now demonstrate a multivariable KNN regression analysis of the Sacramento real estate data using tidymodels. This time we will use house size (measured in square feet) as well as number of bedrooms as our predictors, and continue to use house sale price as our outcome/target variable that we are trying to predict.
+First we’ll build a new model specification and recipe for the analysis. Note that we use the formula price ~ sqft + beds to denote that we have two predictors, and set neighbors = tune() to tell tidymodels to tune the number of neighbors for us.
+```r
+sacr_recipe <- recipe(price ~ sqft + beds, data = sacramento_train) |>
+  step_scale(all_predictors()) |>
+  step_center(all_predictors())
+
+sacr_spec <- nearest_neighbor(weight_func = "rectangular", 
+                              neighbors = tune()) |>
+  set_engine("kknn") |>
+  set_mode("regression")
+```
+Next, we’ll use 5-fold cross-validation to choose the number of neighbors via the minimum RMSPE:
+```r
+gridvals <- tibble(neighbors = seq(1, 200))
+
+sacr_multi <- workflow() |>
+  add_recipe(sacr_recipe) |>
+  add_model(sacr_spec) |>
+  tune_grid(sacr_vfold, grid = gridvals) |>
+  collect_metrics() |>
+  filter(.metric == "rmse") |>
+  filter(mean == min(mean))
+
+sacr_k <- sacr_multi |>
+              pull(neighbors)
+
+sacr_multi
+```
+Here we see that the smallest estimated RMSPE from cross-validation occurs when  K=12. If we want to compare this multivariable KNN regression model to the model with only a single predictor as part of the model tuning process (e.g., if we are running forward selection as described in the chapter on evaluating and tuning classification models), then we must compare the accuracy estimated using only the training data via cross-validation. Looking back, the estimated cross-validation accuracy for the single-predictor model was 85,227. The estimated cross-validation accuracy for the multivariable model is 82,648. Thus in this case, we did not improve the model by a large amount by adding this additional predictor. Regardless, keep going.
+
+```r
+sacr_spec <- nearest_neighbor(weight_func = "rectangular", 
+                              neighbors = sacr_k) |>
+  set_engine("kknn") |>
+  set_mode("regression")
+
+knn_mult_fit <- workflow() |>
+  add_recipe(sacr_recipe) |>
+  add_model(sacr_spec) |>
+  fit(data = sacramento_train)
+
+knn_mult_preds <- knn_mult_fit |>
+  predict(sacramento_test) |>
+  bind_cols(sacramento_test)
+
+knn_mult_mets <- metrics(knn_mult_preds, truth = price, estimate = .pred) |>
+                     filter(.metric == 'rmse')
+knn_mult_mets
+```
+This time, when we performed KNN regression on the same data set, but also included number of bedrooms as a predictor, we obtained a RMSPE test error of 90,953.
+
+We can see that the predictions in this case, where we have 2 predictors, form a surface instead of a line. Because the newly added predictor (number of bedrooms) is related to price (as price changes, so does number of bedrooms) and is not totally determined by house size (our other predictor), we get additional and useful information for making our predictions. For example, in this model we would predict that the cost of a house with a size of 2,500 square feet generally increases slightly as the number of bedrooms increases. Without having the additional predictor of number of bedrooms, we would predict the same price for these two houses.
+
+
+
+
+## Individual fn's
 ```
 prep()
 bake(data_frame)
@@ -232,47 +351,7 @@ Similar to metrics, but gives a confusion matrix instead.
 filter(mean == max(mean))
 ```
 
-**Regression vs Classification:**
 
-Classification is for predicting *discrete class lables* whereas Regression is for *continuous numerical quantitaive* predictions
-
-Just like in classification, we will split our data into training, validation, and test sets, we will use tidymodels workflows, we will use a K-nearest neighbors (KNN) approach to make predictions, and we will use cross-validation to choose K.
-
-## Regression
-Start by reading in the data:
-```r
-sacramento <- read_csv("data/sacramento.csv")
-```
-Much like in the case of classification, we can use a K-nearest neighbors-based approach in regression to make predictions. Let’s take a small sample of the data in, and walk through how K-nearest neighbors (KNN) works in a regression context.
-```r
-small_sacramento <- slice_sample(sacramento, n = 30)
-```
-Next let’s say we come across a 2,000 square-foot house in Sacramento we are interested in purchasing, with an advertised list price of $350,000. Should we offer to pay the asking price for this house, or is it overpriced and we should offer less?
-```r
-nearest_neighbors <- small_sacramento |>
-  mutate(diff = abs(2000 - sqft)) |>
-  arrange(diff) |>
-  slice(1:5) #subset the first 5 rows
-
-nearest_neighbors
-```
-This yields the difference between the house sizes of the 5 nearest neighbors (in terms of house size) to our new 2000 square foot house of interest. We can now predict the average price based on the 5 nearest neighbours:
-```r
-prediction <- nearest_neighbors |>
-  summarise(predicted = mean(price))
-
-prediction
-```
-This predicts 326234 as the mean price for these homes. Above was the concept-oriented manual method. Now the better method:
-
-Start by splitting the data into train and testing: 
-```r
-sacramento_split <- initial_split(sacramento, prop = 0.75, strata = price)
-sacramento_train <- training(sacramento_split)
-sacramento_test <- testing(sacramento_split)
-```
-Next, we’ll use cross-validation to choose  K. In KNN classification, we used accuracy to see how well our predictions matched the true labels. We cannot use the same metric in the regression setting, since our predictions will almost never exactly match the true response variable values. Therefore in the context of KNN regression we will use root mean square prediction error (RMSPE) instead. The mathematical formula for calculating RMSPE is:
-![RMSPE Formula](https://github.com/JordanTreiv/DSCI100--Midterm2CheatSheet/blob/main/RMSPE.PNG)
 
 ## Chunks of code:
 **Splitting the Dataset**
