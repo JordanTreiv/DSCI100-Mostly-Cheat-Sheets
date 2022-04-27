@@ -315,13 +315,154 @@ In order to cluster data using K-means, we also have to pick the number of clust
 
 When using an elbow plot, we want to choose the K where the total WSSD doesnt change as much per added K; the "elbow" so to speak.
 
+To perform K-means clustering in R, we use the kmeans function. It takes at least two arguments: the data frame containing the data you wish to cluster, and K, the number of clusters (here we choose K = 3). Note that since the K-means algorithm uses a random initialization of assignments, but since we set the random seed earlier, the clustering will be reproducible.
+```r
+penguin_clust <- kmeans(standardized_data, centers = 3)
+penguin_clust
+```
+
 # Inference
-Sampling:
+
+#### Describe real-world examples of questions that can be answered with statistical inference:
+What proportion of all undergraduate students in North America own an iPhone?
+
+- We are interested in making a conclusion about all undergraduate students in North America -> referred to as the population 
+- In general, the population is the complete collection of individuals or cases we are interested in studying.
+- In the above question, we are interested in computing a quantity—the proportion of iPhone owners—based on the entire population. This proportion is referred to as a population parameter.
+- In general, a population parameter is a numerical characteristic of the entire population.
+
+#### Definitions:
+
+**Mean:** The average of some quantitative set of values
+
+**Median:** The center point of all quantitative data in a set of values
+
+**Standard Deviation:** A numerical measure of spread or variance of some quantitative set of values
+
+**Proportion:** A parameter that describes a percentage value associated with a population.
+
+**Statistic:** A parameter that describes a percentage value associated with a sample.
+
+**Point Estimate:**  A single number calculated from a random sample that estimates an unknown population parameter of interest
+
+**Random Sampling:** Selecting a subset of observations from a population where each observation is equally likely to be selected at any point during the selection process
+
+**Population:** The entire set of entities/objects of interest
+
+**Representative Sampling:** Selecting a subset of observations from a population where the sample’s characteristics are a good representation of the population’s characteristics
+
+**Sampling Distribution:** A distribution of point estimates, where each point estimate was calculated from a different random sample from the same population
+
+
+#### Use R to draw random samples from a finite population:
 ```r
 samples_100 <- rep_sample_n(can_seniors, size = 100, reps = 1500)
 ```
-Bootstrapping:
+
+#### Use R to create a sampling distribution from a finite population:
+
 ```r
-boot1 <- one_sample %>% 
-    rep_sample_n(size = 40, replace = TRUE, reps = 1)
+sample_1_dist <- ggplot(sample_1, aes(age)) + geom_histogram(binwidth = 1) +
+labs(x = "Age Distribution") +
+ggtitle("Sample Population Distribution")
+sample_1_dist
+
 ```
+
+#### Computing Point Estimates from a Random Sample:
+```r
+sample_1_estimates <- sample_1 %>%
+summarize(sample_1_mean = mean(age), sample_1_med = median(age), sample_1_sd = sd(age))
+sample_1_estimates
+
+```
+***Describe how sample size influences the sampling distribution.***
+
+- As the sample size increases, the sampling distribution of the point estimate becomes narrower.
+- As the sample size increases, more sample point estimates are closer to the true population mean.
+- As the sample size decreases, the sample point estimates become more variable (spread out).
+
+***Bootstrapping definittion: ***
+
+- Sampling with replacement from observed data to estimate the variability in a statistic of interest. 
+- When performing estimation, we want to report a plausible range for the true population quantity we are trying to estimate along with the point estimate: The point estimate will often not be the exact value of the true population quantity we are trying to estimate
+- The value of a point estimate from one sample might very well be different than the value of a point estimate from another sample.
+
+If you take a big enough sample -> looks like the population, so we can pretend that our sample is the population -> take more samples from the big sample with replacement 
+
+By taking many samples of our single observed sample -> do not obtain true sampling distribution -> obtain an approximation -> Bootstrap Distribution
+
+#### Bootstrapping steps:
+
+1. Randomly select an observation from the original sample drawn from the population and record the observation’s value.
+
+2. Replace that observation.
+
+3. Repeat the steps above with replacement until you have the desired number of observations which form your bootstrap sample
+
+4. Calculate the bootstrap point estimate (e.g., mean, median, proportion, slope, etc.) observations in your bootstrap sample.
+
+5. Repeat steps 1–4 many times to create a distribution of point estimates, which creates the bootstrap distribution 
+
+6. Calculate the plausible range of values around our observed point estimate.
+
+### Use R to create a bootstrap distribution to approximate a sampling distribution:
+
+#### Get Sample:
+```r
+one_sample <- can_seniors %>% 
+    rep_sample_n(40) %>% 
+    ungroup() %>% # ungroup the data frame 
+    select(age) # drop the replicate column 
+One_sample
+```
+
+#### Calculate the mean of your point estimate of interest from your sample:
+```r
+one_sample_estimates <- one_sample %>%
+summarize(mean = mean(age))
+one_sample_estimates
+```
+
+#### Take your Bootstrap:
+```r
+boot1 <- one_sample %>%
+rep_sample_n(size = 40, replace = TRUE, reps = 1)
+boot1
+```
+
+#### Visualize your Bootstrap Distribution:\
+```r
+boot1_dist <- ggplot(boot1, aes(x = age)) +
+geom_histogram(binwidth = 1) +
+labs(x = "Age (years)") +
+ggtitle("Distribution of Bootstrap Sample") +
+theme(text = element_text(size = 12))
+boot1_dist
+```
+
+#### Compare the sample mean with the population mean:
+```r
+one_sample_estimates
+
+boot1  %>% 
+    summarise(mean = mean(age))
+```
+
+#### Contrast the bootstrap and sampling distributions:
+
+***Bootsrapping***
+- Bootstrapping -> sampling with replacement 
+- Can approximate what the sampling distribution would look like for a sample
+- Can use the approximation to report how uncertain our sample point estimate is 
+- Boostrap Distribution is an approximation of the true sampling distribution
+
+***Sampling distribution***
+- Sampling distributions -> have access to the actual population parameter 
+- Can evaluate how accurate our estimates of the population parameter are
+- Can get a sense of how much the estimate would vary for different samples from the population 
+- Take many samples of the same size from our population to get an idea of the variability of a sample estimate
+
+
+
+
