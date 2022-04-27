@@ -110,7 +110,70 @@ How do KNN regression and simple linear regression compare on the Sacramento hou
 
 ## Multivariable Linear Regression
 
+As in KNN classification and KNN regression, we can move beyond the simple case of only one predictor to the case with multiple predictors, known as multivariable linear regression. To do this, we follow a very similar approach to what we did for KNN regression: we just add more predictors to the model formula in the recipe. But recall that we do not need to use cross-validation to choose any parameters, nor do we need to standardize (i.e., center and scale) the data for linear regression. Note once again that we have the same concerns regarding multiple predictors as in the settings of multivariable KNN regression and classification: having more predictors is not always better.
 
+We will demonstrate multivariable linear regression using the Sacramento real estate data with both house size (measured in square feet) as well as number of bedrooms as our predictors, and continue to use house sale price as our response variable. We will start by changing the formula in the recipe to include both the sqft and beds variables as predictors:
+
+#### Making a multi-predictor recipe for linear regression
+```r
+mlm_recipe <- recipe(price ~ sqft + beds, data = sacramento_train)
+```
+Now we can build our workflow and fit the model:
+
+#### Adding a multi-predictor recipe to a workflow:
+```r
+mlm_fit <- workflow() |>
+  add_recipe(mlm_recipe) |>
+  add_model(lm_spec) |>
+  fit(data = sacramento_train)
+
+mlm_fit
+```
+And finally, we make predictions on the test data set to assess the quality of our model:
+
+#### Fitting a multi-predictor prediction model to test data, and acquiring metrics
+```r
+lm_mult_test_results <- mlm_fit |>
+  predict(sacramento_test) |>
+  bind_cols(sacramento_test) |>
+  metrics(truth = price, estimate = .pred)
+
+lm_mult_test_results
+```
+If we were to graph this model, we would get a *plane* looking model. This is the hallmark of linear regression, and differs from the wiggly, flexible surface we get from other methods such as KNN regression. As discussed, this can be advantageous in one aspect, which is that for each predictor, we can get slopes/intercept from linear regression, and thus describe the plane mathematically. We can extract those slope values from our model object as shown below:
+
+#### Pulling Coefficients for the model the workflow + fit
+```r
+mcoeffs <- mlm_fit |>
+             pull_workflow_fit() |>
+             tidy()
+
+mcoeffs
+```
+And then use those slopes to write a mathematical equation to describe the prediction plane:
+
+***House Sale Price = b + m_1⋅(House Size) + m_2⋅(Number of Bedrooms)***
+ 
+where:
+
+- b is the vertical intercept of the hyperplane (the price when both house size and number of bedrooms are 0)
+- m_1 is the slope for the first predictor (how quickly the price increases as you increase house size)
+- m_2 is the slope for the second predictor (how quickly the price increases as you increase the number of bedrooms)
+
+Finally, we can fill in the values for b, m_1, and m_2 from the model output given by the code 2 cells up to create the equation of the plane of best fit to the data:
+
+***House Sale Price = 63475 + 166⋅(House Size) - 28761⋅(Number of Bedrooms)***
+
+This model is more interpretable than the multivariable KNN regression model; we can write a mathematical equation that explains how each predictor is affecting the predictions. But as always, we should question how well multivariable linear regression is doing compared to the other tools we have, such as simple linear regression and multivariable KNN regression. If this comparison is part of the model tuning process—for example, if we are trying out many different sets of predictors for multivariable linear and KNN regression—we must perform this comparison using cross-validation on only our training data. But if we have already decided on a small number (e.g., 2 or 3) of tuned candidate models and we want to make a final comparison, we can do so by comparing the prediction error of the methods on the test data.
+
+```r
+ lm_mult_test_results
+```
+will print the results we need. We obtain an RMSPE for the multivariable linear regression model of 81,417.89. This prediction error is less than the prediction error for the multivariable KNN regression model, indicating that we should likely choose linear regression for predictions of house sale price on this data set. Revisiting the simple linear regression model with only a single predictor from earlier in this chapter, we see that the RMSPE for that model was 82,342.28, which is slightly higher than that of our more complex model. Our model with two predictors provided a slightly better fit on test data than our model with just one. As mentioned earlier, this is not always the case: sometimes including more predictors can negatively impact the prediction performance on unseen test data.
+
+### Multicollinearity and outliers
+
+#### Outliers
 
 
 Fitting - print to get the formula
