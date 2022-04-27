@@ -213,20 +213,94 @@ lm_rmse
 ```
 Getting the RMSE value - change the dataset into credit_testing for RMPSE value
 # Clustering
-Scaling the data, setting the number of centers (k-value)
+
+As part of exploratory data analysis, it is often helpful to see if there are meaningful subgroups (or clusters) in the data. This grouping can be used for many purposes, such as generating new questions or improving predictive analyses. This chapter provides an introduction to clustering using the K-means algorithm, including techniques to choose the number of clusters.
+
+Clustering is a data analysis task involving separating a data set into subgroups of related data. For example, we might use clustering to separate a data set of documents into groups that correspond to topics, a data set of human genetic information into groups that correspond to ancestral subpopulations, or a data set of online customers into groups that correspond to purchasing behaviors. Once the data are separated, we can, for example, use the subgroups to generate new questions about the data and follow up with a predictive modeling exercise. In this course, clustering will be used only for exploratory analysis, i.e., uncovering patterns in the data.
+Given that there is no response variable, it is not as easy to evaluate the “quality” of a clustering. With classification, we can use a test data set to assess prediction performance. In clustering, there is not a single good choice for evaluation.
+
+-Clustering is an unsupervised task, as we are trying to understand and examine the structure of data without any response variable labels or values to help us
+-Separating data into groups by similarity 
+  -Useful for exploratory analysis, developing new questions, and subgrouping to improve predictive models (ex. Clustering similar movies based on   preferences and making recommendations) 
+-We are given unlabelled data and the task is to find structure or patterns in the data
+
+**Advantages:**
+
+Requires no additional annotation or input on the data 
+
+ex. It would be nearly impossible to annotate all the articles on Wikipedia with human-made topic labels
+
+**Disadvantages:**
+
+No response variable -> not as easy to evaluate the quality of a clustering 
+
+We use visualization to ascertain the quality of a clustering
+
+
+**Describe a case where clustering is appropriate, and what insight it might extract from the data.**
+
+Can be used for generating new questions or improving predictive analyses 
+
+Once the data are separated -> can use the subgroups to generate new questions about the data and follow up with a predictive modeling exercise
+
+#### Steps for clustering:
+1. Specify the number of clusters 
+2. Those K centroids get randomly placed in your space
+3. Each observation gets temporarily assigned to its closest centroid 
+4. The centroid of each cluster is calculated based on all observations assigned to that cluster 
+Some cluster observations may move closer to a different centroid -> observations get reassigned to a different cluster based on the recalculated centroid 
+5. Now that observations have been reassigned, the centroids need to move again (recalculate centroids from updated clusters)
+6. Continue this process until nothing is reassigned/moving anymore
+
+#### When to scale/standardize data before clustering:
+
+-K-means clustering uses straight-line distance to decide which points are similar to each other (same as classification and regression). Therefore, the scale of each of the variables in the data will influence which cluster data points end up being assigned
+-Variables with a large scale will have a much larger effect on deciding cluster assignment than variables with a small scale. To address this problem, we typically standardize our data before clustering, which ensures that each variable has a mean of 0 and standard deviation of 1
+
+### Code for Clustering:
+#### Scale the data:
 ```r
 scaled_km_data<- km_data %>% 
     mutate(across(everything(), scale))
 pokemon_clusters <- kmeans(scaled_km_data, centers = 4)
 ```
-Clustering plot
+#### Visualizing the clusters: 
 ```r
 Clustering_plot <- augment(pokemon_clusters, scaled_km_data) %>%
     ggplot(aes(x = Speed, y = Defense)) +
     geom_point(aes(color = .cluster)) +
     labs(x = "Pokemon Speed Value", y = "Pokemon Defense Value", color = "Cluster")
 ```
-Create "elbow plot" to figure out the best k value to use
+#### Calculating Within-cluster Sum of Squared Distances:
+```r
+glance(pokemon_clusters) 
+
+elbow_stats <- tibble(k = 1:10) %>%
+rowwise() %>%
+mutate(poke_clusts = list(kmeans(scaled_km_data, nstart = 10, k)), glanced = list(glance(poke_clusts))) %>%
+select(-poke_clusts) %>%
+unnest(glanced)
+elbow_stats
+
+elbow_plot <- ggplot(elbow_stats, aes(x = k, y = tot.withinss)) +
+geom_point() +
+geom_line() +
+labs(x = "K", y = "Total Within-Cluster Sum of Squares")
+elbow_plot
+
+pokemon_final_kmeans <- kmeans(scaled_km_data, nstart = 10, centers = 3)
+
+pokemon_final_clusters <- augment(pokemon_final_kmeans, scaled_km_data)
+
+pokemon_final_clusters_plot <- ggplot(pokemon_final_clusters, aes( x = Speed, y = Defense, color = .cluster)) +
+geom_point() +
+labs(x = "Speed Stat", y = "Defense Stat", color = "Cluster") +
+ggtitle("Pokemon Speed vs Defense Stats") +
+theme(text = element_text(size = 12))
+pokemon_final_clusters_plot
+```
+
+#### Create "elbow plot" to figure out the best k value to use
 ```r
 ks <- tibble(k = 1:10)
 elbow_stats <- ks %>%
