@@ -311,6 +311,9 @@ elbow_stats <- ks %>%
     unnest(glanced)
 elbow_stats
 ```
+In order to cluster data using K-means, we also have to pick the number of clusters, K. But unlike in classification, we have no response variable and cannot perform cross-validation with some measure of model prediction error. Further, if K is chosen too small, then multiple clusters get grouped together; if K is too large, then clusters get subdivided. In both cases, we will potentially miss interesting structure in the data.
+
+When using an elbow plot, we want to choose the K where the total WSSD doesnt change as much per added K; the "elbow" so to speak.
 
 # Inference
 Sampling:
