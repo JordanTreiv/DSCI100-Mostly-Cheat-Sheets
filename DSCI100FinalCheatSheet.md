@@ -172,8 +172,31 @@ This model is more interpretable than the multivariable KNN regression model; we
 will print the results we need. We obtain an RMSPE for the multivariable linear regression model of 81,417.89. This prediction error is less than the prediction error for the multivariable KNN regression model, indicating that we should likely choose linear regression for predictions of house sale price on this data set. Revisiting the simple linear regression model with only a single predictor from earlier in this chapter, we see that the RMSPE for that model was 82,342.28, which is slightly higher than that of our more complex model. Our model with two predictors provided a slightly better fit on test data than our model with just one. As mentioned earlier, this is not always the case: sometimes including more predictors can negatively impact the prediction performance on unseen test data.
 
 ### Multicollinearity and outliers
+#### Multicollinearity 
+The second, and much more subtle, issue can occur when performing multivariable linear regression. In particular, if you include multiple predictors that are strongly linearly related to one another, the coefficients that describe the plane of best fit can be very unreliable—small changes to the data can result in large changes in the coefficients. Consider an extreme example using the Sacramento housing data where the house was measured twice by two people. Since the two people are each slightly inaccurate, the two measurements might not agree exactly, but they are very strongly linearly related to each other.
+If we again fit the multivariable linear regression model on this data, then the plane of best fit has regression coefficients that are very sensitive to the exact values in the data. For example, if we change the data ever so slightly—e.g., by running cross-validation, which splits up the data randomly into different chunks—the coefficients vary by large amounts.
 
-#### Outliers
+### Designing Predictors
+There are, however, a wide variety of cases where the predictor variables do have a meaningful relationship with the response variable, but that relationship does not fit the assumptions of the regression method you have chosen. For example, a data frame df with two variables—x and y—with a nonlinear relationship between the two variables will not be fully captured by simple linear regression.
+
+#### Advantages and Disadvantages of linear regression
+**Advantages:**
+- Very simple
+- Does not get bogged down with bigger data sets
+- Fairly good at predicting beyond measured observations
+- Linear regression fits linearly seperable datasets almost perfectly and is often used to find the nature of the relationship between variables.
+
+**Disadvantages:**
+- Prone to underfitting, especially for datasets with less observations
+- Since linear regression assumes a linear relationship between the input and output varaibles, it fails to fit complex datasets properly.
+- Very sensative to outliers, they directly affect the model, as opposed to KNN where outliers affect their immediate area
+- Assume data is independent 
+
+**When to use?**
+
+- If a linear model is appropriate, the histogram should look approximately normal and the scatterplot of residuals should show random scatter
+- When two variables are known to, or suspected of having a mostly-linear relationship
+- When trying to predict one variable from another for large datasets, as an initial attempt at predictive modelling.
 
 
 Fitting - print to get the formula
