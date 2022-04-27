@@ -12,11 +12,13 @@ where:
 - m = slope of the best fit line
 - x = the value we are predicting with, can be within or outside the limits of provided data
 - b = the y-intercept of the best fit line, or, the value of our response variable when the explanatory variable is zero.
+
 In the context of the housing data:
 - y = house price
 - m = the rate at which house size affects house price
 - x = house size
 - b = the price of a zero-square foot house.
+
 Now of course, in this particular problem, the idea of a 0 square-foot house is a bit silly; but you can think of  b here as the “base price,” and m
 as the increase in price for each square foot of space. Let’s push this thought even further: what would happen in the equation for the line if you tried to evaluate the price of a house with size 6 million square feet? Or what about negative 2,000 square feet? As it turns out, nothing in the formula breaks; linear regression will happily make predictions for crazy predictor values if you ask it to. But even though you can make these wild predictions, you shouldn’t. You should only make predictions roughly within the range of your original data, and perhaps a bit beyond it only if it makes sense. 
 
