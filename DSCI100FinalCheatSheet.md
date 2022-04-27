@@ -382,7 +382,7 @@ sample_1_estimates
 - As the sample size increases, more sample point estimates are closer to the true population mean.
 - As the sample size decreases, the sample point estimates become more variable (spread out).
 
-***Bootstrapping definittion: ***
+***Bootstrapping definittion:***
 
 - Sampling with replacement from observed data to estimate the variability in a statistic of interest. 
 - When performing estimation, we want to report a plausible range for the true population quantity we are trying to estimate along with the point estimate: The point estimate will often not be the exact value of the true population quantity we are trying to estimate
